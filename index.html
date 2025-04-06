@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickCap - PDF and YouTube Summarizer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-5">QuickCap (PDF and YouTube Summarizer)</h1>
+        
+        <div class="row">
+            <!-- PDF Upload Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="card-title">PDF Summarizer</h3>
+                        <form id="pdfForm" action="{{ url_for('summarize_pdf') }}" method="post" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="pdf_file" class="form-label">Upload PDF Files</label>
+                                <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf" multiple required>
+                            </div>
+                            <div id="pdfLoadingIndicator" class="d-none text-center mb-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Processing PDF... Please wait</p>
+                            </div>
+                            <div class="mb-3">
+                                <label for="pdf_target_language" class="form-label">Select Output Language</label>
+                                <select class="form-select" id="pdf_target_language" name="target_language">
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="it">Italian</option>
+                                    <option value="hi">Hindi</option>
+                                    <option value="te">Telugu</option>
+                                    <option value="ta">Tamil</option>
+                                    <option value="ml">Malayalam</option>
+                                    <option value="kn">Kannada</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Summarize PDF</button>
+                        </form>
+                        {% if pdf_summary %}
+                        <div class="mt-4">
+                            <h4>Summary:</h4>
+                            <div class="summary-container">
+                                {% if pdf_summary %}
+                                    {% set points = pdf_summary.split('\n') %}
+                                    <ul class="summary-points">
+                                        {% for point in points %}
+                                            {% if point.strip() %}
+                                                <li class="summary-point">{{ point.strip() }}</li>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- YouTube Section -->
+            <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h3 class="card-title">YouTube Video Summarizer</h3>
+                        <form id="youtubeForm" action="{{ url_for('summarize_youtube') }}" method="post">
+                            <div class="mb-3">
+                                <label for="youtube_link" class="form-label">YouTube Video URL</label>
+                                <input type="url" class="form-control" id="youtube_link" name="youtube_link" required>
+                            </div>
+                            <div id="youtubeLoadingIndicator" class="d-none text-center mb-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>Processing video... Please wait</p>
+                            </div>
+                            <div class="mb-3">
+                                <label for="youtube_target_language" class="form-label">Select Output Language</label>
+                                <select class="form-select" id="youtube_target_language" name="target_language">
+                                    <option value="en">English</option>
+                                    <option value="es">Spanish</option>
+                                    <option value="fr">French</option>
+                                    <option value="de">German</option>
+                                    <option value="it">Italian</option>
+                                    <option value="hi">Hindi</option>
+                                    <option value="te">Telugu</option>
+                                    <option value="ta">Tamil</option>
+                                    <option value="ml">Malayalam</option>
+                                    <option value="kn">Kannada</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Summarize Video</button>
+                        </form>
+                        {% if video_id %}
+                        <div class="mt-4">
+                            <img src="https://img.youtube.com/vi/{{ video_id }}/0.jpg" class="img-fluid mb-3" alt="Video Thumbnail">
+                        </div>
+                        {% endif %}
+                        {% if youtube_summary %}
+                        <div class="mt-4">
+                            <h4>Summary:</h4>
+                            <div class="summary-container">
+                                {% set points = youtube_summary.split('\n') %}
+                                <!-- Add this CSS in the head section -->
+                                <style>
+                                    .important-point {
+                                        background-color: #fff3cd;
+                                        border-left: 4px solid #ffc107 !important;
+                                        font-weight: 500;
+                                    }
+                                </style>
+                                
+                                <!-- Update the summary points display for both PDF and YouTube sections -->
+                                <ul class="summary-points">
+                                    {% for point in points %}
+                                        {% if point.strip() %}
+                                            {% if '[IMPORTANT]' in point %}
+                                                <li class="summary-point important-point">{{ point.replace('[IMPORTANT]', '').strip() }}</li>
+                                            {% else %}
+                                                <li class="summary-point">{{ point.strip() }}</li>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#pdfForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                $('#pdfLoadingIndicator').removeClass('d-none');
+                
+                $.ajax({
+                    url: $(this).attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            const points = response.summary.split('\n');
+                            const formattedPoints = points
+                                .filter(point => point.trim())
+                                .map(point => {
+                                    const isImportant = point.includes('[IMPORTANT]');
+                                    const cleanPoint = point.replace('[IMPORTANT]', '').trim();
+                                    return `<li class="summary-point ${isImportant ? 'important-point' : ''}">${cleanPoint}</li>`;
+                                })
+                                .join('');
+                            const summaryHtml = `
+                                <div class="mt-4">
+                                    <h4>Summary:</h4>
+                                    <div class="summary-container">
+                                        <ul class="summary-points">
+                                            ${formattedPoints}
+                                        </ul>
+                                    </div>
+                                </div>
+                            `;
+                            $('#pdfForm').siblings('.mt-4').remove();
+                            $('#pdfForm').after(summaryHtml);
+                        }
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred while processing the PDF.';
+                        alert(errorMessage);
+                    },
+                    complete: function() {
+                        $('#pdfLoadingIndicator').addClass('d-none');
+                    }
+                });
+            });
+
+
+            $('#youtubeForm').on('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(this);
+                $('#youtubeLoadingIndicator').removeClass('d-none');
+                
+                $.ajax({
+                    url: $(this).attr('action'),
+                    type: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        if (response.success) {
+                            const thumbnailHtml = response.video_id ? `
+                                <div class="mt-4">
+                                    <img src="https://img.youtube.com/vi/${response.video_id}/0.jpg" class="img-fluid mb-3" alt="Video Thumbnail">
+                                </div>
+                            ` : '';
+                            const points = response.summary.split('\n');
+                            const formattedPoints = points
+                                .filter(point => point.trim())
+                                .map(point => {
+                                    const isImportant = point.includes('[IMPORTANT]');
+                                    const cleanPoint = point.replace('[IMPORTANT]', '').trim();
+                                    return `<li class="summary-point ${isImportant ? 'important-point' : ''}">${cleanPoint}</li>`;
+                                })
+                                .join('');
+                            const summaryHtml = `
+                                <div class="mt-4">
+                                    <h4>Summary:</h4>
+                                    <div class="summary-container">
+                                        <ul class="summary-points">
+                                            ${formattedPoints}
+                                        </ul>
+                                    </div>
+                                </div>
+                            `;
+                            $('#youtubeForm').siblings('.mt-4').remove();
+                            $('#youtubeForm').after(thumbnailHtml + summaryHtml);
+                        }
+                    },
+                    error: function(xhr) {
+                        const errorMessage = xhr.responseJSON ? xhr.responseJSON.error : 'An error occurred while processing the video.';
+                        alert(errorMessage);
+                    },
+                    complete: function() {
+                        $('#youtubeLoadingIndicator').addClass('d-none');
+                    }
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>
